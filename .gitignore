@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Frontend build output
+dist/
+
+# Tauri/Rust build output
+src-tauri/target/
+src-tauri/target*/
+
+# Local toolchains and installers
+VSBuildTools/
+
+# Local environment and logs
+.env
+.env.*
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS/editor metadata
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Internal planning notes, not part of the distributable source package
+goal_development_plan.md
+windows_todo_app_development_plan.md

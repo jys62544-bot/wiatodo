@@ -1,0 +1,23 @@
+[package]
+name = "windows-todo-widget"
+version = "0.1.0"
+description = "A lightweight Windows desktop todo widget"
+authors = ["sjy"]
+edition = "2021"
+
+[lib]
+name = "windows_todo_widget_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "windows-todo-widget"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-store = "2"
