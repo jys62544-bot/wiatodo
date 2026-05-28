@@ -1,5 +1,5 @@
 import type { AppSettings } from "../types/settings";
-import type { TodoItem } from "../types/todo";
+import type { TodoGroups, TodoItem } from "../types/todo";
 
 export function createDefaultSettings(): AppSettings {
   return {
@@ -8,6 +8,14 @@ export function createDefaultSettings(): AppSettings {
     windowPosition: null,
     panelSize: { width: 420, height: 600 },
     launchAtStartup: false,
+    activeTodoScope: "longTerm",
+  };
+}
+
+export function createDefaultTodoGroups(): TodoGroups {
+  return {
+    shortTerm: [],
+    longTerm: [],
   };
 }
 
@@ -52,6 +60,50 @@ export function deleteTodo(todos: TodoItem[], id: string): TodoItem[] {
   return todos.filter((todo) => todo.id !== id);
 }
 
+export function editTodo(todos: TodoItem[], id: string, title: string, now = Date.now()): TodoItem[] {
+  const trimmed = title.trim();
+
+  if (!trimmed) {
+    return todos;
+  }
+
+  return todos.map((todo) =>
+    todo.id === id
+      ? {
+          ...todo,
+          title: trimmed,
+          updatedAt: now,
+        }
+      : todo,
+  );
+}
+
+export function reorderTodo(
+  todos: TodoItem[],
+  draggedId: string,
+  targetId: string,
+  placement: "before" | "after",
+): TodoItem[] {
+  if (draggedId === targetId) {
+    return todos;
+  }
+
+  const draggedIndex = todos.findIndex((todo) => todo.id === draggedId);
+  const targetIndex = todos.findIndex((todo) => todo.id === targetId);
+
+  if (draggedIndex === -1 || targetIndex === -1) {
+    return todos;
+  }
+
+  const nextTodos = todos.slice();
+  const [draggedTodo] = nextTodos.splice(draggedIndex, 1);
+  const adjustedTargetIndex = nextTodos.findIndex((todo) => todo.id === targetId);
+  const insertIndex = placement === "before" ? adjustedTargetIndex : adjustedTargetIndex + 1;
+  nextTodos.splice(insertIndex, 0, draggedTodo);
+
+  return nextTodos;
+}
+
 export function completeTodo(todos: TodoItem[], id: string, now = Date.now()): TodoItem[] {
   return todos.map((todo) =>
     todo.id === id
@@ -79,15 +131,22 @@ export function reopenTodo(todos: TodoItem[], id: string, now = Date.now()): Tod
 }
 
 export function toggleImportant(todos: TodoItem[], id: string, now = Date.now()): TodoItem[] {
-  return todos.map((todo) =>
-    todo.id === id
-      ? {
-          ...todo,
-          isImportant: !todo.isImportant,
-          updatedAt: now,
-        }
-      : todo,
-  );
+  const target = todos.find((todo) => todo.id === id);
+
+  if (!target) {
+    return todos;
+  }
+
+  const updatedTodo = {
+    ...target,
+    isImportant: !target.isImportant,
+    updatedAt: now,
+  };
+  const remainingTodos = todos.filter((todo) => todo.id !== id);
+
+  return updatedTodo.isImportant
+    ? [updatedTodo, ...remainingTodos]
+    : todos.map((todo) => (todo.id === id ? updatedTodo : todo));
 }
 
 export function clearCompleted(todos: TodoItem[]): TodoItem[] {
@@ -95,16 +154,7 @@ export function clearCompleted(todos: TodoItem[]): TodoItem[] {
 }
 
 export function getPendingTodos(todos: TodoItem[]): TodoItem[] {
-  return todos
-    .filter((todo) => todo.status === "pending")
-    .slice()
-    .sort((a, b) => {
-      if (a.isImportant !== b.isImportant) {
-        return Number(b.isImportant) - Number(a.isImportant);
-      }
-
-      return b.updatedAt - a.updatedAt;
-    });
+  return todos.filter((todo) => todo.status === "pending");
 }
 
 export function getCompletedTodos(todos: TodoItem[]): TodoItem[] {

@@ -1,4 +1,5 @@
 export type TodoStatus = "pending" | "completed";
+export type TodoScope = "shortTerm" | "longTerm";
 
 export interface TodoItem {
   id: string;
@@ -9,3 +10,5 @@ export interface TodoItem {
   updatedAt: number;
   completedAt: number | null;
 }
+
+export type TodoGroups = Record<TodoScope, TodoItem[]>;

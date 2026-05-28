@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Today Todo",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "identifier": "com.sjy.today-todo",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -14,7 +14,7 @@
       {
         "label": "main",
         "title": "Today Todo",
-        "width": 48,
+        "width": 148,
         "height": 48,
         "decorations": false,
         "transparent": true,

@@ -9,10 +9,11 @@ interface CompletedListProps {
   todos: TodoItem[];
   onReopen: (id: string) => void;
   onDelete: (id: string) => void;
+  onEdit: (id: string, title: string) => void;
   onClearCompleted: () => void;
 }
 
-export function CompletedList({ todos, onReopen, onDelete, onClearCompleted }: CompletedListProps) {
+export function CompletedList({ todos, onReopen, onDelete, onEdit, onClearCompleted }: CompletedListProps) {
   const [isConfirmingClear, setIsConfirmingClear] = useState(false);
 
   return (
@@ -40,6 +41,7 @@ export function CompletedList({ todos, onReopen, onDelete, onClearCompleted }: C
               todo={todo}
               onComplete={() => undefined}
               onDelete={onDelete}
+              onEdit={onEdit}
               onReopen={onReopen}
               onToggleImportant={() => undefined}
             />

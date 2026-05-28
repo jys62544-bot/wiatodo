@@ -7,6 +7,7 @@ interface VisibleArea {
 }
 
 const PANEL_MARGIN = 24;
+const FLOATING_WIDGET_SIZE = { width: 148, height: 48 };
 
 export async function applyWindowMode(
   mode: WidgetMode,
@@ -25,7 +26,7 @@ export async function applyWindowMode(
     return;
   }
 
-  const targetSize = mode === "floating_icon" ? { width: 48, height: 48 } : panelSize;
+  const targetSize = mode === "floating_icon" ? FLOATING_WIDGET_SIZE : panelSize;
   const size = new LogicalSize(targetSize.width, targetSize.height);
   await appWindow.setSize(size);
 
@@ -134,6 +135,15 @@ export async function getWindowPosition(): Promise<{ x: number; y: number } | nu
   const { getCurrentWindow } = await import("@tauri-apps/api/window");
   const position = await getCurrentWindow().outerPosition();
   return { x: position.x, y: position.y };
+}
+
+export async function setWindowAlwaysOnTop(alwaysOnTop: boolean): Promise<void> {
+  if (!isTauriRuntime()) {
+    return;
+  }
+
+  const { getCurrentWindow } = await import("@tauri-apps/api/window");
+  await getCurrentWindow().setAlwaysOnTop(alwaysOnTop);
 }
 
 export async function bindTrayEvents(

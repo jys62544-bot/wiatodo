@@ -2,6 +2,7 @@ import { CheckSquare, Lock, Unlock } from "lucide-react";
 import { MouseEvent, PointerEvent, useRef } from "react";
 import { useAppState, usePersistWindowPosition } from "../store/AppStateContext";
 import { startWindowDrag } from "../services/windowService";
+import { SystemMetricCards } from "./SystemMetricCards";
 
 export function FloatingIcon() {
   const { settings, setWidgetMode, toggleLocked } = useAppState();
@@ -54,8 +55,8 @@ export function FloatingIcon() {
   const LockIcon = settings.isLocked ? Lock : Unlock;
 
   return (
-    <main className="flex h-screen w-screen items-center justify-center bg-transparent">
-      <div className="relative h-12 w-12">
+    <main className="flex h-screen w-screen items-center justify-start gap-1 bg-transparent">
+      <div className="relative h-12 w-12 shrink-0">
         <button
           className="absolute inset-1 flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-blue-500 shadow-md shadow-slate-300/40 transition hover:border-blue-200 hover:bg-blue-50"
           type="button"
@@ -89,6 +90,7 @@ export function FloatingIcon() {
           <LockIcon size={11} />
         </button>
       </div>
+      <SystemMetricCards />
     </main>
   );
 }

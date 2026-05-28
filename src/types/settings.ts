@@ -1,3 +1,5 @@
+import type { TodoGroups, TodoScope } from "./todo";
+
 export type WidgetMode = "floating_icon" | "todo_panel" | "hidden_to_tray";
 
 export interface AppSettings {
@@ -6,9 +8,10 @@ export interface AppSettings {
   windowPosition: { x: number; y: number } | null;
   panelSize: { width: number; height: number };
   launchAtStartup: boolean;
+  activeTodoScope: TodoScope;
 }
 
 export interface StoreState {
-  todos: import("./todo").TodoItem[];
+  todoGroups: TodoGroups;
   settings: AppSettings;
 }

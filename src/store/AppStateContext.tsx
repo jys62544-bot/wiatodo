@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { AppSettings, StoreState, WidgetMode } from "../types/settings";
-import type { TodoItem } from "../types/todo";
+import type { TodoGroups, TodoItem, TodoScope } from "../types/todo";
 import { createDefaultState, loadState, saveState } from "../services/storageService";
 import {
   addTodo,
@@ -9,6 +9,8 @@ import {
   clearCompleted,
   completeTodo,
   deleteTodo,
+  editTodo,
+  reorderTodo,
   reopenTodo,
   toggleImportant,
 } from "../services/todoDomain";
@@ -18,10 +20,13 @@ type Action =
   | { type: "addTodo"; title: string }
   | { type: "addTodosBatch"; titles: string[] }
   | { type: "deleteTodo"; id: string }
+  | { type: "editTodo"; id: string; title: string }
   | { type: "completeTodo"; id: string }
   | { type: "reopenTodo"; id: string }
   | { type: "toggleImportant"; id: string }
+  | { type: "reorderTodo"; draggedId: string; targetId: string; placement: "before" | "after" }
   | { type: "clearCompleted" }
+  | { type: "setTodoScope"; scope: TodoScope }
   | { type: "setWidgetMode"; mode: WidgetMode }
   | { type: "setLocked"; isLocked: boolean }
   | { type: "toggleLocked" }
@@ -31,15 +36,20 @@ type Action =
 interface AppStateContextValue {
   state: StoreState;
   todos: TodoItem[];
+  todoGroups: TodoGroups;
+  activeTodoScope: TodoScope;
   settings: AppSettings;
   isHydrated: boolean;
   addTodo: (title: string) => void;
   addTodosBatch: (titles: string[]) => void;
   deleteTodo: (id: string) => void;
+  editTodo: (id: string, title: string) => void;
   completeTodo: (id: string) => void;
   reopenTodo: (id: string) => void;
   toggleImportant: (id: string) => void;
+  reorderTodo: (draggedId: string, targetId: string, placement: "before" | "after") => void;
   clearCompleted: () => void;
+  setTodoScope: (scope: TodoScope) => void;
   setWidgetMode: (mode: WidgetMode) => void;
   setLocked: (isLocked: boolean) => void;
   toggleLocked: () => void;
@@ -91,10 +101,17 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const addTodoAction = useCallback((title: string) => dispatch({ type: "addTodo", title }), []);
   const addTodosBatchAction = useCallback((titles: string[]) => dispatch({ type: "addTodosBatch", titles }), []);
   const deleteTodoAction = useCallback((id: string) => dispatch({ type: "deleteTodo", id }), []);
+  const editTodoAction = useCallback((id: string, title: string) => dispatch({ type: "editTodo", id, title }), []);
   const completeTodoAction = useCallback((id: string) => dispatch({ type: "completeTodo", id }), []);
   const reopenTodoAction = useCallback((id: string) => dispatch({ type: "reopenTodo", id }), []);
   const toggleImportantAction = useCallback((id: string) => dispatch({ type: "toggleImportant", id }), []);
+  const reorderTodoAction = useCallback(
+    (draggedId: string, targetId: string, placement: "before" | "after") =>
+      dispatch({ type: "reorderTodo", draggedId, targetId, placement }),
+    [],
+  );
   const clearCompletedAction = useCallback(() => dispatch({ type: "clearCompleted" }), []);
+  const setTodoScopeAction = useCallback((scope: TodoScope) => dispatch({ type: "setTodoScope", scope }), []);
   const setWidgetModeAction = useCallback((mode: WidgetMode) => dispatch({ type: "setWidgetMode", mode }), []);
   const setLockedAction = useCallback((isLocked: boolean) => dispatch({ type: "setLocked", isLocked }), []);
   const toggleLockedAction = useCallback(() => dispatch({ type: "toggleLocked" }), []);
@@ -110,16 +127,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AppStateContextValue>(
     () => ({
       state,
-      todos: state.todos,
+      todos: state.todoGroups[state.settings.activeTodoScope],
+      todoGroups: state.todoGroups,
+      activeTodoScope: state.settings.activeTodoScope,
       settings: state.settings,
       isHydrated,
       addTodo: addTodoAction,
       addTodosBatch: addTodosBatchAction,
       deleteTodo: deleteTodoAction,
+      editTodo: editTodoAction,
       completeTodo: completeTodoAction,
       reopenTodo: reopenTodoAction,
       toggleImportant: toggleImportantAction,
+      reorderTodo: reorderTodoAction,
       clearCompleted: clearCompletedAction,
+      setTodoScope: setTodoScopeAction,
       setWidgetMode: setWidgetModeAction,
       setLocked: setLockedAction,
       toggleLocked: toggleLockedAction,
@@ -133,12 +155,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       clearCompletedAction,
       completeTodoAction,
       deleteTodoAction,
+      editTodoAction,
       flushStateAction,
       isHydrated,
+      reorderTodoAction,
       reopenTodoAction,
       saveWindowPositionAction,
       setLockedAction,
       setPanelSizeAction,
+      setTodoScopeAction,
       setWidgetModeAction,
       state,
       toggleImportantAction,
@@ -177,21 +202,36 @@ function reducer(state: StoreState, action: Action): StoreState {
     case "hydrate":
       return action.state;
     case "addTodo":
-      return { ...state, todos: addTodo(state.todos, action.title) };
+      return updateActiveTodos(state, (todos) => addTodo(todos, action.title));
     case "addTodosBatch":
-      return { ...state, todos: addTodosBatch(state.todos, action.titles) };
+      return updateActiveTodos(state, (todos) => addTodosBatch(todos, action.titles));
     case "deleteTodo":
-      return { ...state, todos: deleteTodo(state.todos, action.id) };
+      return updateActiveTodos(state, (todos) => deleteTodo(todos, action.id));
+    case "editTodo":
+      return updateActiveTodos(state, (todos) => editTodo(todos, action.id, action.title));
     case "completeTodo":
-      return { ...state, todos: completeTodo(state.todos, action.id) };
+      return updateActiveTodos(state, (todos) => completeTodo(todos, action.id));
     case "reopenTodo":
-      return { ...state, todos: reopenTodo(state.todos, action.id) };
+      return updateActiveTodos(state, (todos) => reopenTodo(todos, action.id));
     case "toggleImportant":
-      return { ...state, todos: toggleImportant(state.todos, action.id) };
+      return updateActiveTodos(state, (todos) => toggleImportant(todos, action.id));
+    case "reorderTodo":
+      return updateActiveTodos(state, (todos) =>
+        reorderTodo(todos, action.draggedId, action.targetId, action.placement),
+      );
     case "clearCompleted":
-      return { ...state, todos: clearCompleted(state.todos) };
+      return updateActiveTodos(state, clearCompleted);
+    case "setTodoScope":
+      return { ...state, settings: { ...state.settings, activeTodoScope: action.scope } };
     case "setWidgetMode":
-      return { ...state, settings: { ...state.settings, widgetMode: action.mode } };
+      return {
+        ...state,
+        settings: {
+          ...state.settings,
+          widgetMode: action.mode,
+          activeTodoScope: action.mode === "todo_panel" ? "longTerm" : state.settings.activeTodoScope,
+        },
+      };
     case "setLocked":
       return { ...state, settings: { ...state.settings, isLocked: action.isLocked } };
     case "toggleLocked":
@@ -203,4 +243,16 @@ function reducer(state: StoreState, action: Action): StoreState {
     default:
       return state;
   }
+}
+
+function updateActiveTodos(state: StoreState, updater: (todos: TodoItem[]) => TodoItem[]): StoreState {
+  const scope = state.settings.activeTodoScope;
+
+  return {
+    ...state,
+    todoGroups: {
+      ...state.todoGroups,
+      [scope]: updater(state.todoGroups[scope]),
+    },
+  };
 }

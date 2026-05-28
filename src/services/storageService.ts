@@ -1,5 +1,6 @@
 import type { StoreState } from "../types/settings";
-import { createDefaultSettings } from "./todoDomain";
+import type { TodoItem, TodoScope } from "../types/todo";
+import { createDefaultSettings, createDefaultTodoGroups } from "./todoDomain";
 
 const STATE_KEY = "todo-widget-state";
 const STORE_FILE = "todo-widget-store.json";
@@ -34,7 +35,7 @@ export async function saveState(state: StoreState): Promise<void> {
 
 export function createDefaultState(): StoreState {
   return {
-    todos: [],
+    todoGroups: createDefaultTodoGroups(),
     settings: createDefaultSettings(),
   };
 }
@@ -73,22 +74,18 @@ function normalizeState(raw: unknown): StoreState {
 
   const candidate = raw as Partial<StoreState>;
   const defaults = createDefaultState();
-  const todos = Array.isArray(candidate.todos)
-    ? candidate.todos
-        .filter((todo) => todo && typeof todo === "object")
-        .map((todo) => todo as StoreState["todos"][number])
-        .filter((todo) => typeof todo.id === "string" && typeof todo.title === "string")
-        .map((todo) => ({
-          id: todo.id,
-          title: todo.title.trim(),
-          status: todo.status === "completed" ? ("completed" as const) : ("pending" as const),
-          isImportant: Boolean(todo.isImportant),
-          createdAt: numberOrNow(todo.createdAt),
-          updatedAt: numberOrNow(todo.updatedAt),
-          completedAt: typeof todo.completedAt === "number" ? todo.completedAt : null,
-        }))
-        .filter((todo) => todo.title)
-    : [];
+  const legacyTodos = (raw as { todos?: unknown }).todos;
+  const rawTodoGroups = (raw as { todoGroups?: unknown }).todoGroups;
+  const todoGroups =
+    rawTodoGroups && typeof rawTodoGroups === "object"
+      ? {
+          shortTerm: normalizeTodos((rawTodoGroups as { shortTerm?: unknown }).shortTerm),
+          longTerm: normalizeTodos((rawTodoGroups as { longTerm?: unknown }).longTerm),
+        }
+      : {
+          ...defaults.todoGroups,
+          shortTerm: normalizeTodos(legacyTodos),
+        };
 
   const settings =
     candidate.settings && typeof candidate.settings === "object"
@@ -100,10 +97,30 @@ function normalizeState(raw: unknown): StoreState {
           panelSize: normalizePanelSize(candidate.settings.panelSize),
           isLocked: Boolean(candidate.settings.isLocked),
           launchAtStartup: Boolean(candidate.settings.launchAtStartup),
+          activeTodoScope: normalizeTodoScope(candidate.settings.activeTodoScope),
         }
       : defaults.settings;
 
-  return { todos, settings };
+  return { todoGroups, settings };
+}
+
+function normalizeTodos(value: unknown): TodoItem[] {
+  return Array.isArray(value)
+    ? value
+        .filter((todo) => todo && typeof todo === "object")
+        .map((todo) => todo as Partial<TodoItem>)
+        .filter((todo) => typeof todo.id === "string" && typeof todo.title === "string")
+        .map((todo) => ({
+          id: todo.id as string,
+          title: (todo.title as string).trim(),
+          status: todo.status === "completed" ? ("completed" as const) : ("pending" as const),
+          isImportant: Boolean(todo.isImportant),
+          createdAt: numberOrNow(todo.createdAt),
+          updatedAt: numberOrNow(todo.updatedAt),
+          completedAt: typeof todo.completedAt === "number" ? todo.completedAt : null,
+        }))
+        .filter((todo) => todo.title)
+    : [];
 }
 
 function normalizeWidgetMode(mode: unknown): StoreState["settings"]["widgetMode"] {
@@ -112,6 +129,10 @@ function normalizeWidgetMode(mode: unknown): StoreState["settings"]["widgetMode"
   }
 
   return "floating_icon";
+}
+
+function normalizeTodoScope(scope: unknown): TodoScope {
+  return scope === "shortTerm" ? "shortTerm" : "longTerm";
 }
 
 function normalizePosition(position: unknown): StoreState["settings"]["windowPosition"] {

@@ -7,9 +7,11 @@ import {
   createDefaultSettings,
   createTodo,
   deleteTodo,
+  editTodo,
   getCompletedTodos,
   getPendingTodos,
   reopenTodo,
+  reorderTodo,
   toggleImportant,
 } from "./todoDomain";
 import type { TodoItem } from "../types/todo";
@@ -51,6 +53,16 @@ describe("todoDomain", () => {
     todos = toggleImportant(todos, first.id, 500);
     expect(todos.find((todo) => todo.id === first.id)?.isImportant).toBe(true);
 
+    todos = editTodo(todos, first.id, "  修改后的第一条  ", 550);
+    expect(todos.find((todo) => todo.id === first.id)).toMatchObject({
+      title: "修改后的第一条",
+      updatedAt: 550,
+      status: "pending",
+    });
+
+    const afterBlankEdit = editTodo(todos, first.id, "   ", 560);
+    expect(afterBlankEdit).toBe(todos);
+
     todos = deleteTodo(todos, second.id);
     expect(todos.map((todo) => todo.id)).toEqual([first.id]);
 
@@ -58,7 +70,7 @@ describe("todoDomain", () => {
     expect(clearCompleted(todos).some((todo) => todo.id === first.id)).toBe(false);
   });
 
-  it("sorts pending important-first by updatedAt and completed by completedAt", () => {
+  it("keeps pending todos in manual order and sorts completed by completedAt", () => {
     const oldImportant = { ...createTodo("旧重要", 100), isImportant: true, updatedAt: 100 };
     const newNormal = { ...createTodo("新普通", 200), updatedAt: 400 };
     const newImportant = { ...createTodo("新重要", 300), isImportant: true, updatedAt: 300 };
@@ -76,14 +88,46 @@ describe("todoDomain", () => {
     };
 
     expect(getPendingTodos([oldImportant, newNormal, newImportant]).map((todo) => todo.title)).toEqual([
-      "新重要",
       "旧重要",
       "新普通",
+      "新重要",
     ]);
     expect(getCompletedTodos([completedOlder, completedNewer]).map((todo) => todo.title)).toEqual([
       "晚完成",
       "早完成",
     ]);
+  });
+
+  it("reorders todos before or after the target item", () => {
+    const first = createTodo("第一条", 100);
+    const second = createTodo("第二条", 200);
+    const third = createTodo("第三条", 300);
+
+    expect(reorderTodo([first, second, third], third.id, first.id, "before").map((todo) => todo.title)).toEqual([
+      "第三条",
+      "第一条",
+      "第二条",
+    ]);
+    expect(reorderTodo([first, second, third], first.id, third.id, "after").map((todo) => todo.title)).toEqual([
+      "第二条",
+      "第三条",
+      "第一条",
+    ]);
+    expect(reorderTodo([first, second, third], first.id, first.id, "after")).toEqual([first, second, third]);
+  });
+
+  it("moves a highlighted todo to the top without losing manual ordering for the rest", () => {
+    const first = createTodo("第一条", 100);
+    const second = createTodo("第二条", 200);
+    const third = createTodo("第三条", 300);
+
+    const todos = toggleImportant([first, second, third], third.id, 400);
+
+    expect(todos.map((todo) => todo.title)).toEqual(["第三条", "第一条", "第二条"]);
+    expect(todos[0]).toMatchObject({
+      isImportant: true,
+      updatedAt: 400,
+    });
   });
 
   it("batch-adds titles as pending todos and exposes required default settings", () => {
@@ -97,6 +141,7 @@ describe("todoDomain", () => {
       windowPosition: null,
       panelSize: { width: 420, height: 600 },
       launchAtStartup: false,
+      activeTodoScope: "longTerm",
     });
   });
 });

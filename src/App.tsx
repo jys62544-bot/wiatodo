@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { FloatingIcon } from "./components/FloatingIcon";
 import { TodoPanel } from "./components/TodoPanel";
-import { applyWindowMode, bindTrayEvents, bindWindowMoved, exitApp } from "./services/windowService";
+import { applyWindowMode, bindTrayEvents, bindWindowMoved, exitApp, setWindowAlwaysOnTop } from "./services/windowService";
 import { useAppState } from "./store/AppStateContext";
 
 export default function App() {
@@ -16,6 +16,16 @@ export default function App() {
       console.warn("Failed to apply window mode", error);
     });
   }, [isHydrated, settings.panelSize, settings.widgetMode]);
+
+  useEffect(() => {
+    if (!isHydrated || !settings.isLocked) {
+      return;
+    }
+
+    setWindowAlwaysOnTop(true).catch((error) => {
+      console.warn("Failed to keep locked window on top", error);
+    });
+  }, [isHydrated, settings.isLocked]);
 
   useEffect(() => {
     let unlisten: () => void = () => undefined;
