@@ -146,11 +146,11 @@ npm run tauri build
 打包成功后，Windows 安装包位于：
 
 ```text
-src-tauri/target/release/bundle/nsis/Today Todo_0.1.1_x64-setup.exe
-src-tauri/target/release/bundle/msi/Today Todo_0.1.1_x64_en-US.msi
+src-tauri/target/release/bundle/nsis/Today Todo_0.1.2_x64-setup.exe
+src-tauri/target/release/bundle/msi/Today Todo_0.1.2_x64_en-US.msi
 ```
 
-推荐普通用户下载并运行 `Today Todo_0.1.1_x64-setup.exe`。
+推荐普通用户下载并运行 `Today Todo_0.1.2_x64-setup.exe`。
 
 该应用目前未做代码签名，因此在其他电脑上安装时可能会出现 Windows SmartScreen 或“未知发布者”提示。选择继续运行后即可安装。
 
@@ -171,7 +171,13 @@ src-tauri/
 
 ## 发布说明
 
-当前版本：`0.1.1`
+当前版本：`0.1.2`
+
+`0.1.2` 重点更新：
+
+- 新增待办输入框改为多行编辑，长内容可以直接换行输入。
+- 待办条目编辑模式改为多行编辑，长内容不再挤在单行里。
+- 新增回归测试，覆盖新增输入和编辑输入的多行控件行为。
 
 `0.1.1` 重点更新：
 

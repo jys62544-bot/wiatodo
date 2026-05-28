@@ -1,6 +1,6 @@
 [package]
 name = "windows-todo-widget"
-version = "0.1.1"
+version = "0.1.2"
 description = "A lightweight Windows desktop todo widget"
 authors = ["sjy"]
 edition = "2021"
