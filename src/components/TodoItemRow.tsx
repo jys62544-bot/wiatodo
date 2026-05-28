@@ -42,8 +42,7 @@ export function TodoItemRow({
     setIsEditing(false);
   }
 
-  function saveEdit(event?: FormEvent) {
-    event?.preventDefault();
+  function saveEdit() {
     const trimmed = draftTitle.trim();
 
     if (!trimmed) {
@@ -54,13 +53,6 @@ export function TodoItemRow({
     onEdit(todo.id, trimmed);
     setHasEditError(false);
     setIsEditing(false);
-  }
-
-  function handleEditKeyDown(event: KeyboardEvent<HTMLInputElement>) {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      cancelEditing();
-    }
   }
 
   return (
@@ -99,26 +91,16 @@ export function TodoItemRow({
       </button>
       <div className="min-w-0 flex-1">
         {isEditing ? (
-          <form className="flex gap-1.5" onSubmit={saveEdit}>
-            <input
-              className={`min-w-0 flex-1 rounded border bg-white px-2 py-1 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 ${
-                hasEditError ? "border-red-300" : "border-slate-200"
-              }`}
-              value={draftTitle}
-              autoFocus
-              onChange={(event) => {
-                setDraftTitle(event.target.value);
-                setHasEditError(false);
-              }}
-              onKeyDown={handleEditKeyDown}
-            />
-            <button className="icon-btn text-blue-600" type="submit" title="保存">
-              <Save size={14} />
-            </button>
-            <button className="icon-btn" type="button" title="取消" onClick={cancelEditing}>
-              <X size={14} />
-            </button>
-          </form>
+          <TodoEditForm
+            value={draftTitle}
+            hasError={hasEditError}
+            onChange={(value) => {
+              setDraftTitle(value);
+              setHasEditError(false);
+            }}
+            onCancel={cancelEditing}
+            onSave={saveEdit}
+          />
         ) : (
           <p
             className={`whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-sm leading-5 ${
@@ -154,5 +136,55 @@ export function TodoItemRow({
         </button>
       </div>
     </li>
+  );
+}
+
+interface TodoEditFormProps {
+  value: string;
+  hasError: boolean;
+  onChange: (value: string) => void;
+  onCancel: () => void;
+  onSave: () => void;
+}
+
+export function TodoEditForm({ value, hasError, onChange, onCancel, onSave }: TodoEditFormProps) {
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    onSave();
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      onCancel();
+      return;
+    }
+
+    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      onSave();
+    }
+  }
+
+  return (
+    <form className="flex items-start gap-1.5" onSubmit={handleSubmit}>
+      <textarea
+        className={`min-h-[4.5rem] max-h-40 min-w-0 flex-1 resize-y rounded border bg-white px-2 py-1 text-sm leading-5 text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 ${
+          hasError ? "border-red-300" : "border-slate-200"
+        }`}
+        value={value}
+        rows={3}
+        autoFocus
+        aria-label="编辑待办内容"
+        onChange={(event) => onChange(event.target.value)}
+        onKeyDown={handleKeyDown}
+      />
+      <button className="icon-btn text-blue-600" type="submit" title="保存">
+        <Save size={14} />
+      </button>
+      <button className="icon-btn" type="button" title="取消" onClick={onCancel}>
+        <X size={14} />
+      </button>
+    </form>
   );
 }
